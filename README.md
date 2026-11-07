@@ -29,7 +29,7 @@ From this folder run `python -m http.server 8000`, then open http://localhost:80
 
 The workflow publishes only web assets, not export scripts or documentation. All URLs are relative, so project paths such as `/anaemia-website/` work. GitHub Pages supports public repositories on GitHub Free: https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages
 
-The ONNX model is stored as five chunks under 25 MB each to support both Git and GitHub web uploads. The browser reassembles and checks the SHA-256 before loading it. Do not use Git LFS for these files. The website and model weights are publicly downloadable when published; patient images, dataset files, credentials and notebook outputs should not be committed.
+The ONNX model is stored as five chunks under 25 MB each. If uploading through GitHub's web interface, commit each model part separately to stay within its total upload limit. The workflow and browser both verify the complete model's SHA-256. Do not use Git LFS for these files. The website and model weights are publicly downloadable when published; patient images, dataset files, credentials and notebook outputs should not be committed.
 
 ## Updating the model
 
