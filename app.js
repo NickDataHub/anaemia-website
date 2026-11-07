@@ -10,14 +10,14 @@ function updateControls() {
 }
 function resetResult() {
   $('empty-result').hidden = false; $('results').hidden = true;
-  $('result-state').textContent = 'AWAITING ANALYSIS'; attentionMap = null;
+  $('result-state').textContent = 'Awaiting analysis'; attentionMap = null;
 }
 function clearImage() {
   generation++; image = null; resizedRGB = null; resetResult();
   if (imageURL) URL.revokeObjectURL(imageURL); imageURL = null;
   $('preview').removeAttribute('src'); $('preview').hidden = true; $('upload-prompt').hidden = false;
   $('image-file').value = ''; $('file-info').textContent = 'Use a clear, close-up image of the inner lower eyelid.';
-  $('result-state').textContent = 'AWAITING IMAGE'; status('Choose an image to get started.'); updateControls();
+  $('result-state').textContent = 'Awaiting image'; status('Choose an image to get started.'); updateControls();
 }
 async function selectImage(file) {
   if (busy || !file) return;
@@ -83,7 +83,7 @@ function drawAttention() {
 }
 async function analyse() {
   if (busy || !image || !$('acknowledge').checked) return;
-  busy = true; resetResult(); updateControls(); $('result-state').textContent = 'PROCESSING';
+  busy = true; resetResult(); updateControls(); $('result-state').textContent = 'Processing';
   let tensor, outputs;
   try {
     await loadModel(); status('Analysing locally… Keep this tab open.');
@@ -94,10 +94,10 @@ async function analyse() {
     $('prediction').textContent = predicted === 1 ? 'Image classified as anaemia' : 'Image classified as non-anaemia';
     $('anaemia-score').textContent = `${(scores[1] * 100).toFixed(1)}%`; $('anaemia-bar').value = scores[1];
     $('normal-score').textContent = `${(scores[0] * 100).toFixed(1)}%`; $('normal-bar').value = scores[0];
-    $('empty-result').hidden = true; $('results').hidden = false; $('result-state').textContent = 'ANALYSIS COMPLETE';
+    $('empty-result').hidden = true; $('results').hidden = false; $('result-state').textContent = 'Analysis complete';
     $('run-info').textContent = `${new Date().toLocaleString()} · ${( (performance.now() - start) / 1000).toFixed(1)}s inference · Model ${modelInfo.sha256.slice(0, 12)}`;
     drawAttention(); status('Assessment complete. This result cannot confirm or rule out anaemia.');
-  } catch (error) { console.error(error); status(error.message || 'Analysis failed. Please try again.', true); $('result-state').textContent = 'ANALYSIS UNAVAILABLE'; }
+  } catch (error) { console.error(error); status(error.message || 'Analysis failed. Please try again.', true); $('result-state').textContent = 'Analysis unavailable'; }
   finally { tensor?.dispose(); if (outputs) Object.values(outputs).forEach(x => x.dispose()); busy = false; updateControls(); }
 }
 $('image-file').addEventListener('change', e => selectImage(e.target.files[0]));
