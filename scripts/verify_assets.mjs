@@ -11,7 +11,7 @@ for (const part of manifest.parts) {
 }
 assert.equal(bytes, manifest.bytes, 'Model file size mismatch');
 assert.equal(hash.digest('hex'), manifest.sha256, 'Model integrity mismatch');
-for (const file of ['index.html', 'styles.css', 'app.js', 'preprocess.js', 'vendor/ort.min.js', 'vendor/ort-wasm-simd-threaded.mjs', 'vendor/ort-wasm-simd-threaded.wasm']) {
+for (const file of ['favicon.svg', 'index.html', 'styles.css', 'app.js', 'preprocess.js', 'vendor/ort.min.js', 'vendor/ort-wasm-simd-threaded.mjs', 'vendor/ort-wasm-simd-threaded.wasm']) {
   assert(existsSync(new URL(file, root)), `Missing required asset: ${file}`);
 }
 console.log(`Verified ${manifest.parts.length} model parts (${bytes} bytes) and all runtime assets.`);

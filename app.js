@@ -32,7 +32,7 @@ async function selectImage(file) {
     if (candidate.naturalWidth < 32 || candidate.naturalHeight < 32) throw new Error('This image is too small. Choose an image at least 32 × 32 pixels.');
     image = candidate; imageURL = url; $('preview').src = url; $('preview').hidden = false; $('upload-prompt').hidden = true;
     $('file-info').textContent = `${file.name} · ${candidate.naturalWidth} × ${candidate.naturalHeight} px`;
-    status('Image ready. Confirm research use, then analyse.');
+    status('Image ready. Read the note below, then analyse.');
   } catch (e) { URL.revokeObjectURL(url); if (request === generation) status(e.message.startsWith('Please') || e.message.startsWith('This') ? e.message : 'This file could not be read as an image.', true); }
   updateControls();
 }
@@ -91,12 +91,12 @@ async function analyse() {
     const scores = softmax(outputs.logits.data), predicted = scores[1] > scores[0] ? 1 : 0;
     if (outputs.attention.data.length !== 98 || !Array.from(outputs.attention.data).every(Number.isFinite)) throw new Error('Invalid attention output.');
     attentionMap = Array.from(outputs.attention.data.slice(predicted * 49, (predicted + 1) * 49));
-    $('prediction').textContent = predicted === 1 ? 'Anaemia' : 'Normal';
+    $('prediction').textContent = predicted === 1 ? 'Image classified as anaemia' : 'Image classified as non-anaemia';
     $('anaemia-score').textContent = `${(scores[1] * 100).toFixed(1)}%`; $('anaemia-bar').value = scores[1];
     $('normal-score').textContent = `${(scores[0] * 100).toFixed(1)}%`; $('normal-bar').value = scores[0];
     $('empty-result').hidden = true; $('results').hidden = false; $('result-state').textContent = 'ANALYSIS COMPLETE';
     $('run-info').textContent = `${new Date().toLocaleString()} · ${( (performance.now() - start) / 1000).toFixed(1)}s inference · Model ${modelInfo.sha256.slice(0, 12)}`;
-    drawAttention(); status('Analysis complete. This result is for research only.');
+    drawAttention(); status('Assessment complete. This result cannot confirm or rule out anaemia.');
   } catch (error) { console.error(error); status(error.message || 'Analysis failed. Please try again.', true); $('result-state').textContent = 'ANALYSIS UNAVAILABLE'; }
   finally { tensor?.dispose(); if (outputs) Object.values(outputs).forEach(x => x.dispose()); busy = false; updateControls(); }
 }
