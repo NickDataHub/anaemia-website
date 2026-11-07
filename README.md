@@ -62,3 +62,5 @@ These are numerical/software checks, not clinical validation or estimates of dia
 Model and methodology originate in the supplied Anaemia AI notebooks and checkpoint. ONNX Runtime Web 1.22.0 is bundled under its MIT license (see `vendor/ONNX-RUNTIME-LICENSE.txt`). No new license for the supplied model or dataset is asserted here. Dataset permissions and model distribution rights remain the project owner's responsibility.
 
 ONNX Runtime browser documentation: https://onnxruntime.ai/docs/get-started/with-javascript/web.html
+
+If a deployment retry reports duplicate `github-pages` artifacts, start a fresh workflow run instead of rerunning the same attempt.
