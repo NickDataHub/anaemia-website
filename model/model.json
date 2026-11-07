@@ -1,0 +1,28 @@
+{
+  "architecture": "ResNet-50",
+  "classes": [
+    "Normal",
+    "Anaemia"
+  ],
+  "input": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "parts": [
+    "resnet50.part00.bin",
+    "resnet50.part01.bin",
+    "resnet50.part02.bin",
+    "resnet50.part03.bin",
+    "resnet50.part04.bin"
+  ],
+  "bytes": 93989717,
+  "sha256": "59df2988d591dc56e538eb37c843f3424c01227860813a6107e8e23e660f86da",
+  "checkpoint_sha256": "151bea5d75d88d627d628d232a79a46a7229fbad03818023079678e092b0a59b",
+  "validation": {
+    "synthetic_cases": 3,
+    "maximum_logit_error": 1.5944242477416992e-06,
+    "attention_autograd_check": "passed"
+  }
+}

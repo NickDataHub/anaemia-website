@@ -1,0 +1,1 @@
+{"name":"anaemia-website","private":true,"type":"module","scripts":{"check":"node --check app.js && node --check preprocess.js"}}
