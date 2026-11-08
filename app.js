@@ -101,7 +101,7 @@ async function analyse() {
     // Exploratory cutoff chosen on development data for at least 90% sensitivity.
     // It is not independently validated and is not a diagnostic threshold.
     const flagged = score >= 0.34824995696544647;
-    viewRGB=full; viewMask=mask; $('prediction').textContent=flagged ? 'Model prediction: anaemia indicated' : 'Model prediction: anaemia not indicated'; $('anaemia-score').textContent=`${(score*100).toFixed(1)}%`; $('anaemia-bar').value=score; $('normal-score').textContent=`${((1-score)*100).toFixed(1)}%`; $('normal-bar').value=1-score;
+    viewRGB=full; viewMask=mask; $('prediction').textContent=flagged ? 'Model prediction: anaemia indicated' : 'Model prediction: anaemia not indicated'; $('anaemia-score').textContent=`${(score*100).toFixed(1)}%`; $('anaemia-bar').value=score;
     $('empty-result').hidden=true; $('results').hidden=false; $('result-state').textContent='Analysis complete'; $('run-info').textContent=`${new Date().toLocaleString()} · ${((performance.now()-start)/1000).toFixed(1)}s on this device`;
     drawSegmentation(); status('Complete. This result cannot confirm or rule out anaemia.');
   } catch (e) { console.error(e); status(e.message || 'Analysis failed. Please try again.',true); $('result-state').textContent='Analysis unavailable'; }
