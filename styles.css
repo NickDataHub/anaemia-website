@@ -5,3 +5,8 @@
 .photo-guide ol { padding-left: 1.3rem; margin-bottom: .5rem; }
 .photo-guide li + li { margin-top: .4rem; }
 .photo-guide p { margin-bottom: 0; }
+.region-review { margin-top: 1.25rem; padding: 1rem; border: 1px solid #e8d9dd; border-radius: 10px; background: #fbf8f8; }
+.region-review h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.region-review p { color: #62545a; font-size: .9rem; line-height: 1.55; }
+.region-review canvas { width: 100%; height: 220px; object-fit: contain; background: #f6eff1; border-radius: 6px; }
+.region-review .secondary { margin-top: .6rem; width: 100%; }

@@ -1,0 +1,29 @@
+{
+  "models": {
+    "segmenter": {
+      "parts": [
+        "mixedseg-v1.part00.bin",
+        "mixedseg-v1.part01.bin",
+        "mixedseg-v1.part02.bin"
+      ],
+      "bytes": 57312725,
+      "sha256": "580e7abb723c38d646b530ba446f896ffa4ba69623034d7d5ae7302a1d1016d8"
+    },
+    "original": {
+      "parts": [
+        "full-fp16-v1.part00.bin",
+        "full-fp16-v1.part01.bin",
+        "full-fp16-v1.part02.bin"
+      ],
+      "bytes": 47003645,
+      "sha256": "773908272888732d032860044237c739f9f787bb475217d1755c5c905a1656f5"
+    },
+    "crop": {
+      "parts": [
+        "crop-fp16-v1.part00.bin"
+      ],
+      "bytes": 8076035,
+      "sha256": "114288cf35cbe81fb23f51afbcb787799ee3e9a930b520464f989dcd080a2aa8"
+    }
+  }
+}

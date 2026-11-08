@@ -1,9 +1,9 @@
 import { resizeRGB, normalize, softmax } from './preprocess.js';
 const $ = id => document.getElementById(id);
-let sessions, image, imageURL, busy = false, generation = 0, viewRGB, viewMask;
+let sessions = {}, modelManifest, image, imageURL, busy = false, generation = 0, viewRGB, viewMask, pending;
 const status = (message, error = false) => { $('status').textContent = message; $('status').classList.toggle('error', error); };
-function updateControls() { $('analyse').disabled = busy || !image || !$('acknowledge').checked; $('clear').disabled = busy || !image; $('image-file').disabled = busy; $('acknowledge').disabled = busy; }
-function resetResult() { $('empty-result').hidden = false; $('results').hidden = true; $('result-state').textContent = 'Awaiting analysis'; viewMask = null; }
+function updateControls() { $('analyse').disabled = busy || !image || !$('acknowledge').checked || !!pending; $('clear').disabled = busy || !image; $('image-file').disabled = busy; $('acknowledge').disabled = busy; $('confirm-region').disabled = busy || !pending || !$('acknowledge').checked; $('retry-image').disabled = busy; }
+function resetResult() { $('empty-result').hidden = false; $('results').hidden = true; $('result-state').textContent = 'Awaiting analysis'; $('region-review').hidden = true; viewMask = null; pending = null; }
 function clearImage() {
   generation++; image = null; viewRGB = null; resetResult();
   if (imageURL) URL.revokeObjectURL(imageURL); imageURL = null;
@@ -24,28 +24,23 @@ async function selectImage(file) {
   } catch (e) { URL.revokeObjectURL(url); if (request === generation) status(e.message || 'This file could not be read as an image.', true); }
   updateControls();
 }
-async function loadModels() {
-  if (sessions) return;
+async function loadModel(name) {
+  if (sessions[name]) return;
   if (!window.ort) throw new Error('The inference engine could not load. Reload and try again.');
   ort.env.wasm.wasmPaths = new URL('./vendor/', location.href).href; ort.env.wasm.numThreads = 1;
-  const response = await fetch('./model/ensemble.json'); if (!response.ok) throw new Error('Model configuration is unavailable.');
-  const manifest = await response.json(), made = {};
-  try {
-    for (const [name, model] of Object.entries(manifest.models)) {
-      const chunks = []; let loaded = 0;
-      for (const part of model.parts) {
-        status(`Downloading ${name} model: ${Math.round(loaded / model.bytes * 100)}%. This may take a few minutes.`);
-        const reply = await fetch(new URL(part, new URL('./model/', location.href))); if (!reply.ok) throw new Error('Model download failed. Check your connection.');
-        const chunk = new Uint8Array(await reply.arrayBuffer()); chunks.push(chunk); loaded += chunk.length;
-      }
-      if (loaded !== model.bytes) throw new Error('Model download was incomplete.');
-      const bytes = new Uint8Array(loaded); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-      const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
-      if (digest !== model.sha256) throw new Error('Model integrity check failed. Reload the page.');
-      status(`Preparing ${name} model on this device...`); made[name] = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-    }
-    sessions = made;
-  } catch (e) { await Promise.all(Object.values(made).map(s => s.release())); throw e; }
+  if (!modelManifest) { const response=await fetch('./model/ensemble-mixed-v1.json'); if(!response.ok) throw new Error('Model configuration is unavailable.'); modelManifest=await response.json(); }
+  const model=modelManifest.models[name]; if(!model) throw new Error('A required model is unavailable.');
+  const chunks=[]; let loaded=0;
+  for(const part of model.parts) {
+    status(`Downloading analysis files: ${Math.round(loaded/model.bytes*100)}%. This may take a few minutes.`);
+    const reply=await fetch(new URL(part,new URL('./model/',location.href))); if(!reply.ok) throw new Error('Model download failed. Check your connection.');
+    const chunk=new Uint8Array(await reply.arrayBuffer()); chunks.push(chunk); loaded+=chunk.length;
+  }
+  if(loaded!==model.bytes) throw new Error('Model download was incomplete.');
+  const bytes=new Uint8Array(loaded); let offset=0; for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+  if(digest!==model.sha256) throw new Error('Model integrity check failed. Reload the page.');
+  status('Preparing analysis on this device...'); sessions[name]=await ort.InferenceSession.create(bytes,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
 }
 function asRGBA(rgb) { const a = new Uint8ClampedArray(rgb.length / 3 * 4); for (let i = 0; i < rgb.length / 3; i++) { a[4*i] = rgb[3*i]; a[4*i+1] = rgb[3*i+1]; a[4*i+2] = rgb[3*i+2]; a[4*i+3] = 255; } return a; }
 function prepareImage() {
@@ -88,26 +83,38 @@ function cropToMask(rgb, mask) {
 }
 function drawSegmentation() {
   if (!viewRGB || !viewMask) return;
-  const ctx=$('attention').getContext('2d'), pixels=ctx.createImageData(224,224);
-  for (let i=0;i<224*224;i++) { const show=$('overlay-toggle').checked && viewMask[i]; for (let c=0;c<3;c++) pixels.data[4*i+c]=show ? Math.round(viewRGB[3*i+c]*.58+[190,45,91][c]*.42) : viewRGB[3*i+c]; pixels.data[4*i+3]=255; } ctx.putImageData(pixels,0,0);
+  for (const id of ['region-preview','attention']) {
+    const ctx=$(id).getContext('2d'), pixels=ctx.createImageData(224,224);
+    for (let i=0;i<224*224;i++) { const show=(id==='region-preview' || $('overlay-toggle').checked) && viewMask[i]; for (let c=0;c<3;c++) pixels.data[4*i+c]=show ? Math.round(viewRGB[3*i+c]*.58+[190,45,91][c]*.42) : viewRGB[3*i+c]; pixels.data[4*i+3]=255; } ctx.putImageData(pixels,0,0);
+  }
 }
 async function run(session, rgb, dims) { const input=new ort.Tensor('float32',normalize(rgb),dims); try { const out=await session.run({image:input}); const logits=Array.from(out.logits.data); Object.values(out).forEach(x=>x.dispose()); return softmax(logits)[1]; } finally { input.dispose(); } }
 async function analyse() {
   if (busy || !image || !$('acknowledge').checked) return; busy=true; resetResult(); updateControls(); $('result-state').textContent='Processing'; let input, output;
   try {
-    await loadModels(); status('Analysing on this device...'); const start=performance.now(), rgb=prepareImage(); input=new ort.Tensor('float32',normalize(rgb),[1,3,480,640]);
+    await loadModel('segmenter'); status('Finding the eyelid region on this device...'); const start=performance.now(), rgb=prepareImage(); input=new ort.Tensor('float32',normalize(rgb),[1,3,480,640]);
     output=await sessions.segmenter.run({image:input}); const mask=largestComponent(nearestMask(output.mask_probability.data)); const crop=cropToMask(rgb,mask), full=resizeRGB(asRGBA(rgb),640,480);
+    viewRGB=full; viewMask=mask; pending={crop,full,start}; $('region-review').hidden=false; drawSegmentation(); $('result-state').textContent='Check selected region'; status('Check the highlighted region before continuing.');
+  } catch (e) { console.error(e); status(e.message || 'Analysis failed. Please try again.',true); $('result-state').textContent='Analysis unavailable'; }
+  finally { input?.dispose(); if(output) Object.values(output).forEach(x=>x.dispose()); busy=false; updateControls(); }
+}
+async function confirmRegion() {
+  if(busy || !pending || !$('acknowledge').checked) return;
+  busy=true; updateControls(); $('result-state').textContent='Processing'; status('Analysing on this device...');
+  try {
+    await loadModel('original'); await loadModel('crop'); status('Analysing on this device...'); const {crop,full}=pending; const start=performance.now();
     const [a,b]=await Promise.all([run(sessions.original,full,[1,3,224,224]),run(sessions.crop,crop,[1,3,224,224])]); const score=(a+b)/2;
     // Exploratory cutoff chosen on development data for at least 90% sensitivity.
     // It is not independently validated and is not a diagnostic threshold.
     const flagged = score >= 0.34824995696544647;
-    viewRGB=full; viewMask=mask; $('prediction').textContent=flagged ? 'Model prediction: anaemia indicated' : 'Model prediction: anaemia not indicated'; $('anaemia-score').textContent=`${(score*100).toFixed(1)}%`; $('anaemia-bar').value=score;
+    $('prediction').textContent=flagged ? 'Model prediction: anaemia indicated' : 'Model prediction: anaemia not indicated'; $('anaemia-score').textContent=`${(score*100).toFixed(1)}%`; $('anaemia-bar').value=score;
     $('empty-result').hidden=true; $('results').hidden=false; $('result-state').textContent='Analysis complete'; $('run-info').textContent=`${new Date().toLocaleString()} · ${((performance.now()-start)/1000).toFixed(1)}s on this device`;
-    drawSegmentation(); status('Complete. This result cannot confirm or rule out anaemia.');
+    pending=null; $('region-review').hidden=true; drawSegmentation(); status('Complete. This result cannot confirm or rule out anaemia.');
   } catch (e) { console.error(e); status(e.message || 'Analysis failed. Please try again.',true); $('result-state').textContent='Analysis unavailable'; }
-  finally { input?.dispose(); if(output) Object.values(output).forEach(x=>x.dispose()); busy=false; updateControls(); }
+  finally { busy=false; updateControls(); }
 }
 $('image-file').addEventListener('change',e=>selectImage(e.target.files[0])); $('acknowledge').addEventListener('change',updateControls); $('clear').addEventListener('click',clearImage); $('analyse').addEventListener('click',analyse); $('overlay-toggle').addEventListener('change',drawSegmentation); $('report').addEventListener('click',()=>window.print());
+$('confirm-region').addEventListener('click',confirmRegion); $('retry-image').addEventListener('click',clearImage);
 for (const name of ['dragenter','dragover']) $('dropzone').addEventListener(name,e=>{e.preventDefault();if(!busy)$('dropzone').classList.add('dragover');});
 for (const name of ['dragleave','drop']) $('dropzone').addEventListener(name,e=>{e.preventDefault();$('dropzone').classList.remove('dragover');});
 $('dropzone').addEventListener('drop',e=>selectImage(e.dataTransfer.files[0])); window.addEventListener('beforeunload',()=>{if(imageURL)URL.revokeObjectURL(imageURL);});
