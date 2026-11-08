@@ -83,7 +83,10 @@ async function analyse() {
     await loadModels(); status('Analysing on this device...'); const start=performance.now(), rgb=prepareImage(); input=new ort.Tensor('float32',normalize(rgb),[1,3,480,640]);
     output=await sessions.segmenter.run({image:input}); const mask=nearestMask(output.mask_probability.data); const crop=cropToMask(rgb,mask), full=resizeRGB(asRGBA(rgb),640,480);
     const [a,b]=await Promise.all([run(sessions.original,full,[1,3,224,224]),run(sessions.crop,crop,[1,3,224,224])]); const score=(a+b)/2;
-    viewRGB=full; viewMask=mask; $('prediction').textContent='No medical conclusion can be drawn'; $('anaemia-score').textContent=score.toFixed(3); $('anaemia-bar').value=score; $('normal-score').textContent=(1-score).toFixed(3); $('normal-bar').value=1-score;
+    // Exploratory cutoff chosen on development data for at least 90% sensitivity.
+    // It is not independently validated and is not a diagnostic threshold.
+    const flagged = score >= 0.34824995696544647;
+    viewRGB=full; viewMask=mask; $('prediction').textContent=flagged ? 'Model prediction: anaemia indicated' : 'Model prediction: anaemia not indicated'; $('anaemia-score').textContent=`${(score*100).toFixed(1)}%`; $('anaemia-bar').value=score; $('normal-score').textContent=`${((1-score)*100).toFixed(1)}%`; $('normal-bar').value=1-score;
     $('empty-result').hidden=true; $('results').hidden=false; $('result-state').textContent='Analysis complete'; $('run-info').textContent=`${new Date().toLocaleString()} · ${((performance.now()-start)/1000).toFixed(1)}s on this device`;
     drawSegmentation(); status('Complete. This result cannot confirm or rule out anaemia.');
   } catch (e) { console.error(e); status(e.message || 'Analysis failed. Please try again.',true); $('result-state').textContent='Analysis unavailable'; }
