@@ -60,6 +60,21 @@ function nearestMask(prob) {
   for (let y=0;y<224;y++,iy+=sy) { let ix=sx/2; for (let x=0;x<224;x++,ix+=sx) mask[y*224+x] = prob[Math.floor(iy)*640+Math.floor(ix)] >= .5 ? 1 : 0; }
   return mask;
 }
+function largestComponent(mask) {
+  const seen=new Uint8Array(mask.length), queue=new Int32Array(mask.length); let best=[];
+  for (let start=0;start<mask.length;start++) {
+    if (!mask[start] || seen[start]) continue;
+    let head=0,tail=0; queue[tail++]=start; seen[start]=1;
+    while (head<tail) {
+      const p=queue[head++], x=p%224;
+      for (const n of [x>0?p-1:-1,x<223?p+1:-1,p>=224?p-224:-1,p<224*223?p+224:-1]) {
+        if(n>=0 && mask[n] && !seen[n]) { seen[n]=1; queue[tail++]=n; }
+      }
+    }
+    if(tail>best.length) best=Array.from(queue.subarray(0,tail));
+  }
+  const clean=new Uint8Array(mask.length); for(const i of best) clean[i]=1; return clean;
+}
 function roundEven(n) { const f=Math.floor(n); return n-f===.5 ? f+(f%2) : Math.round(n); }
 function cropToMask(rgb, mask) {
   let l=224,r=-1,t=224,b=-1,count=0;
@@ -81,7 +96,7 @@ async function analyse() {
   if (busy || !image || !$('acknowledge').checked) return; busy=true; resetResult(); updateControls(); $('result-state').textContent='Processing'; let input, output;
   try {
     await loadModels(); status('Analysing on this device...'); const start=performance.now(), rgb=prepareImage(); input=new ort.Tensor('float32',normalize(rgb),[1,3,480,640]);
-    output=await sessions.segmenter.run({image:input}); const mask=nearestMask(output.mask_probability.data); const crop=cropToMask(rgb,mask), full=resizeRGB(asRGBA(rgb),640,480);
+    output=await sessions.segmenter.run({image:input}); const mask=largestComponent(nearestMask(output.mask_probability.data)); const crop=cropToMask(rgb,mask), full=resizeRGB(asRGBA(rgb),640,480);
     const [a,b]=await Promise.all([run(sessions.original,full,[1,3,224,224]),run(sessions.crop,crop,[1,3,224,224])]); const score=(a+b)/2;
     // Exploratory cutoff chosen on development data for at least 90% sensitivity.
     // It is not independently validated and is not a diagnostic threshold.
