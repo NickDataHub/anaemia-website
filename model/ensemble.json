@@ -1,0 +1,31 @@
+{
+  "models": {
+    "original": {
+      "parts": [
+        "resnet50.part00.bin",
+        "resnet50.part01.bin",
+        "resnet50.part02.bin",
+        "resnet50.part03.bin",
+        "resnet50.part04.bin"
+      ],
+      "bytes": 93989717,
+      "sha256": "59df2988d591dc56e538eb37c843f3424c01227860813a6107e8e23e660f86da"
+    },
+    "segmenter": {
+      "parts": [
+        "segmenter.part00.bin",
+        "segmenter.part01.bin",
+        "segmenter.part02.bin"
+      ],
+      "bytes": 57312725,
+      "sha256": "791c9e4b6755bb00b2a09fd644e8d0dfb7ecccc4770ab0fe1b6082e5dc2d1188"
+    },
+    "crop": {
+      "parts": [
+        "crop.part00.bin"
+      ],
+      "bytes": 16030433,
+      "sha256": "48986269f7bf4ad3c40c800bc08d0fd22f661dade8d7cfcfe455b62c82a58d8c"
+    }
+  }
+}

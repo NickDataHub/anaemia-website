@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const method=source.slice(source.indexOf('function nearestMask'),source.indexOf('function roundEven'));
+const nearestMask=new Function(`${method}; return nearestMask;`)();
+const input=new Float32Array(640*480);
+for(let y=0;y<480;y++) for(let x=0;x<640;x++) input[y*640+x]=((x*3+y*5)%11)<5?1:0;
+const hash=createHash('sha256').update(nearestMask(input)).digest('hex');
+assert.equal(hash,'f310248d9918d2ec2ca81cf5ed98a9da45fc083041b7325238653b333be18100','mask resize differs from Pillow nearest-neighbour reference');
+console.log('Mask resizing matches the Pillow reference.');

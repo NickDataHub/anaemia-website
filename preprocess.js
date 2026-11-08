@@ -11,24 +11,24 @@ function coefficients(from, to) {
     return { start, weights: weights.map(w => Math.floor(w / sum * precision + 0.5)) };
   });
 }
-export function resizeRGB(rgba, width, height, size = 224) {
+export function resizeRGB(rgba, width, height, outWidth = 224, outHeight = outWidth) {
   const precision = 2 ** 22, half = precision / 2;
-  const horizontal = coefficients(width, size), vertical = coefficients(height, size);
-  const temp = new Uint8Array(size * height * 3), rgb = new Uint8Array(size * size * 3);
-  for (let y = 0; y < height; y++) for (let x = 0; x < size; x++) for (let c = 0; c < 3; c++) {
+  const horizontal = coefficients(width, outWidth), vertical = coefficients(height, outHeight);
+  const temp = new Uint8Array(outWidth * height * 3), rgb = new Uint8Array(outWidth * outHeight * 3);
+  for (let y = 0; y < height; y++) for (let x = 0; x < outWidth; x++) for (let c = 0; c < 3; c++) {
     const { start, weights } = horizontal[x]; let sum = half;
     for (let i = 0; i < weights.length; i++) sum += rgba[(y * width + start + i) * 4 + c] * weights[i];
-    temp[(y * size + x) * 3 + c] = Math.max(0, Math.min(255, Math.floor(sum / precision)));
+    temp[(y * outWidth + x) * 3 + c] = Math.max(0, Math.min(255, Math.floor(sum / precision)));
   }
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) for (let c = 0; c < 3; c++) {
+  for (let y = 0; y < outHeight; y++) for (let x = 0; x < outWidth; x++) for (let c = 0; c < 3; c++) {
     const { start, weights } = vertical[y]; let sum = half;
-    for (let i = 0; i < weights.length; i++) sum += temp[((start + i) * size + x) * 3 + c] * weights[i];
-    rgb[(y * size + x) * 3 + c] = Math.max(0, Math.min(255, Math.floor(sum / precision)));
+    for (let i = 0; i < weights.length; i++) sum += temp[((start + i) * outWidth + x) * 3 + c] * weights[i];
+    rgb[(y * outWidth + x) * 3 + c] = Math.max(0, Math.min(255, Math.floor(sum / precision)));
   }
   return rgb;
 }
-export function normalize(rgb, size = 224) {
-  const count = size * size, tensor = new Float32Array(3 * count);
+export function normalize(rgb) {
+  const count = rgb.length / 3, tensor = new Float32Array(3 * count);
   const mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225];
   for (let c = 0; c < 3; c++) for (let i = 0; i < count; i++) tensor[c * count + i] = (rgb[3 * i + c] / 255 - mean[c]) / std[c];
   return tensor;
